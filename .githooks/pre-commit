@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#!/bin/bash
+
+# Define color variables
+RED='\e[31m'
+GREEN='\e[32m'
+YELLOW='\e[33m'
+BLUE='\e[34m'
+DIM_GREY='\e[2;37m'
+DIM_YELLOW='\e[2;33m'
+DIM_GREEN='\e[2;32m'
+BOLD='\e[1m'
+NC='\e[0m' # No Color (Reset)
+
+printf "${YELLOW}Running pre-commit script...${NC}\n"
+
+./export.pm.collection.sh
+# Capture the exit code of the command
+if [ $? -ne 0 ]; then
+  printf "${RED}.  Postman collection failed. Commit aborted.${NC}\n"
+  exit 1
+fi
+
+git add .

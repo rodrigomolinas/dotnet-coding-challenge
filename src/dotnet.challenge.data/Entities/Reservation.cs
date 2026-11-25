@@ -5,10 +5,11 @@ public enum ReservationStatus
     Active,
     Confirmed,
     Released,
-    Expired
+    Expired,
+    NotAReservation
 }
 
-public class Reservation
+public record class Reservation()
 {
     public Guid Id { get; set; }
 
@@ -21,4 +22,6 @@ public class Reservation
     public DateTime ExpiresAt { get; set; }
 
     public ReservationStatus Status { get; set; }
+
+    public bool IsVerboseOldState { get; set; } = false;
 }

@@ -30,6 +30,8 @@ public interface IInventoryService
 
     Task<Product?> GetProductAsync(Guid id);
 
+    Task<IEnumerable<Product>> GetProductsAsync();
+
     Task<(ReserveResult Result, Reservation? Reservation)> TryReserveAsync(Guid productId, int quantity, int ttlSeconds);
 
     Task<Reservation?> GetReservationAsync(Guid id);

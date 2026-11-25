@@ -1,0 +1,223 @@
+{
+  "id": "2635491-7159668a-1a48-413a-a3bf-68e2e1a3a194",
+  "name": "Inventory Reservations API",
+  "description": "Run the requests in order against the local API. Create product and Create reservation save their IDs as collection variables. The final product request shows the stock restored after release.",
+  "$kind": "collection",
+  "variables": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:5000",
+      "disabled": false,
+      "secret": false
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "disabled": false,
+      "secret": false
+    },
+    {
+      "key": "reservationId",
+      "value": "",
+      "disabled": false,
+      "secret": false
+    }
+  ],
+  "scripts": [],
+  "items": [
+    {
+      "id": "2635491-cd115a70-0219-4f0e-9766-5526c194eb40",
+      "name": "Create product",
+      "url": "{{baseUrl}}/api/products",
+      "method": "POST",
+      "headers": [
+        {
+          "key": "Accept",
+          "value": "application/json"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "content": "{\n  \"name\": \"Widget\",\n  \"stock\": 10\n}"
+      },
+      "$kind": "http-request",
+      "settings": {},
+      "scripts": [
+        {
+          "type": "afterResponse",
+          "code": "pm.test(\"HTTP 201\", function () {\n    pm.response.to.have.status(201);\n});\nif (pm.response.code === 201) {\n    pm.collectionVariables.set(\"productId\", pm.response.json().id);\n}",
+          "language": "text/javascript"
+        }
+      ]
+    },
+    {
+      "id": "2635491-cf16246c-28e7-4102-aeef-3250e808759f",
+      "name": "List products",
+      "url": "{{baseUrl}}/api/products",
+      "method": "GET",
+      "headers": [
+        {
+          "key": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "$kind": "http-request",
+      "settings": {},
+      "scripts": [
+        {
+          "type": "afterResponse",
+          "code": "pm.test(\"HTTP 200\", function () {\n    pm.response.to.have.status(200);\n});",
+          "language": "text/javascript"
+        }
+      ]
+    },
+    {
+      "id": "2635491-4a22bc55-e718-4daa-ba1e-29b680fdb9b1",
+      "name": "Get product",
+      "url": "{{baseUrl}}/api/products/{{productId}}",
+      "method": "GET",
+      "headers": [
+        {
+          "key": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "$kind": "http-request",
+      "settings": {},
+      "scripts": [
+        {
+          "type": "afterResponse",
+          "code": "pm.test(\"HTTP 200\", function () {\n    pm.response.to.have.status(200);\n});",
+          "language": "text/javascript"
+        }
+      ]
+    },
+    {
+      "id": "2635491-0a30de38-5073-40b2-a61e-170ab2edb90c",
+      "name": "Create reservation",
+      "url": "{{baseUrl}}/api/reservations",
+      "method": "POST",
+      "headers": [
+        {
+          "key": "Accept",
+          "value": "application/json"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "X-Verbose",
+          "value": "true"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "content": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": {{randQ}},\n  \"ttlSeconds\": 10\n}"
+      },
+      "$kind": "http-request",
+      "settings": {},
+      "scripts": [
+        {
+          "type": "afterResponse",
+          "code": "pm.test(\"HTTP 2XX\", function () {\n    try{\n        pm.response.to.have.status(201);\n    } catch(err){\n        if(pm.response.code == 409){\n            const m = /stockQuantity=([0-9]+)/gi.exec(pm.response.headers.get('X-Reservation-Details')||\"\");\n            if(m){\n                const stock = Number(m[1]);\n                if(!Number.isNaN(stock)){\n                    return;\n                }\n            }\n        }\n\n        throw err;\n    }\n});\nif (pm.response.code === 201) {\n    pm.collectionVariables.set(\"reservationId\", pm.response.json().id);\n}",
+          "language": "text/javascript"
+        },
+        {
+          "type": "beforeRequest",
+          "code": "const r = Math.floor(Math.random() * (10 - 1 + 1)) + 1;\npm.variables.set(\"randQ\", r);",
+          "language": "text/javascript"
+        }
+      ]
+    },
+    {
+      "id": "2635491-ed0784a4-4531-498f-ae46-dda1fc983a24",
+      "name": "Get reservation",
+      "url": "{{baseUrl}}/api/reservations/{{reservationId}}",
+      "method": "GET",
+      "headers": [
+        {
+          "key": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "$kind": "http-request",
+      "settings": {},
+      "scripts": [
+        {
+          "type": "afterResponse",
+          "code": "pm.test(\"HTTP 200\", function () {\n    pm.response.to.have.status(200);\n});",
+          "language": "text/javascript"
+        }
+      ]
+    },
+    {
+      "id": "2635491-02361359-2f83-4706-9a98-9839d3003edd",
+      "name": "Confirm reservation",
+      "url": "{{baseUrl}}/api/reservations/{{reservationId}}/confirm",
+      "method": "POST",
+      "headers": [
+        {
+          "key": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "$kind": "http-request",
+      "settings": {},
+      "scripts": [
+        {
+          "type": "afterResponse",
+          "code": "pm.test(\"HTTP 200\", function () {\n    pm.response.to.have.status(200);\n});",
+          "language": "text/javascript"
+        }
+      ]
+    },
+    {
+      "id": "2635491-56fb1501-ed37-470f-9d11-bd600ecf58b7",
+      "name": "Release reservation",
+      "url": "{{baseUrl}}/api/reservations/{{reservationId}}",
+      "method": "DELETE",
+      "headers": [
+        {
+          "key": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "$kind": "http-request",
+      "settings": {},
+      "scripts": [
+        {
+          "type": "afterResponse",
+          "code": "pm.test(\"HTTP 204\", function () {\n    pm.response.to.have.status(204);\n});",
+          "language": "text/javascript"
+        }
+      ]
+    },
+    {
+      "id": "2635491-ce875f75-0218-448e-998e-74a3b59cbc3d",
+      "name": "Check restored stock",
+      "url": "{{baseUrl}}/api/products/{{productId}}",
+      "method": "GET",
+      "headers": [
+        {
+          "key": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "$kind": "http-request",
+      "settings": {},
+      "scripts": [
+        {
+          "type": "afterResponse",
+          "code": "pm.test(\"HTTP 200\", function () {\n    pm.response.to.have.status(200);\n});",
+          "language": "text/javascript"
+        }
+      ]
+    }
+  ],
+  "url": "https://go.postman.co/collection/2635491-7159668a-1a48-413a-a3bf-68e2e1a3a194"
+}

@@ -2,44 +2,21 @@ using dotnet.challenge.api.Services;
 
 namespace dotnet.challenge.api.Background;
 
-/// <summary>
-/// Periodically sweeps Active reservations whose ExpiresAt has passed and returns
-/// their quantity to the owning product's Stock.
-/// </summary>
-public class ReservationExpirySweeper : IHostedService
+public class ReservationExpirySweeper(
+    IInventoryService inventory, ILogger<ReservationExpirySweeper> logger) : BackgroundService
 {
-    private readonly IServiceProvider _services;
-    private readonly ILogger<ReservationExpirySweeper> _logger;
-
-    public ReservationExpirySweeper(IServiceProvider services, ILogger<ReservationExpirySweeper> logger)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _services = services;
-        _logger = logger;
-    }
-
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        _ = Task.Run(() => Loop(cancellationToken));
-        return Task.CompletedTask;
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    private void Loop(CancellationToken ct)
-    {
-        while (true)
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        while (await timer.WaitForNextTickAsync(stoppingToken))
         {
-            Thread.Sleep(TimeSpan.FromSeconds(1));
-
             try
             {
-                using var scope = _services.CreateScope();
-                var inventory = scope.ServiceProvider.GetRequiredService<IInventoryService>();
-                inventory.SweepExpiredAsync().GetAwaiter().GetResult();
+                await inventory.SweepExpiredAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Expiry sweep failed");
+                logger.LogError(ex, "Expiry sweep failed");
             }
         }
     }

@@ -6,6 +6,29 @@ You will extend a small **inventory reservation** service. The scaffold is inten
 
 We would like you to spend no more than **3 hours** on this.
 
+## Challenge Hands-on
+
+* Start time: 2026-11-25T17:05:00
+* End time: 2026-11-25T19:01:00
+* Pre:
+```bash
+# Install older SDK version
+curl -sSL https://dot.net/v1/dotnet-install.sh | sudo bash -s -- --version 8.0.410 --install-dir /usr/local/share/
+```
+* Evidence: [issues](./docs/issues.md)
+
+
+### Diagnostic
+
+| Area | Finding |
+|---|---|
+| Reservation concurrency | Stock is checked and decremented in separate steps, so simultaneous requests can oversell. |
+| In-memory cache | The shared cache uses an unsynchronized `Dictionary`, so concurrent reads and writes are unsafe. |
+| Expiry clock | Reservations store UTC timestamps, but `IsExpired` compares them with local time. |
+| Background worker | The sweeper blocks a thread in an infinite loop and ignores shutdown cancellation. |
+| HTTP response | Insufficient stock returns `200 OK`. The brief requires `409 Conflict`. |
+
+
 ## Ground rules
 
 1. Use .NET 8 and C#
@@ -42,6 +65,7 @@ The service tracks **products** (each with some available stock) and lets client
 
 ```
 POST   /api/products                       create a product
+GET    /api/products                       list all products
 GET    /api/products/{id}                  get a product (includes current Stock)
 
 POST   /api/reservations                   create a reservation
@@ -94,3 +118,27 @@ Be deliberate — we will be reading the controller. At minimum:
 - **Restraint.** The scaffold is small on purpose. Don't rewrite it; extend it.
 
 When you're ready to share your work, push to a private repo and add your reviewer as a collaborator.
+
+### Verbose reservation responses
+
+Send `X-Verbose: true` with `POST /api/reservations` to receive the `X-Reservation-Details` response header. It contains the outcome, requested quantity, and TTL in seconds. Successful reservations also include the UTC expiry timestamp. The HTTP status and JSON response body follow the usual contract.
+
+## Defect fixes
+
+1. Concurrent reservations could pass the same stock check, so the inventory service serializes stock checks and reservation transitions with an asynchronous lock.
+2. The shared cache used a dictionary that could fail during concurrent access, so it now uses a concurrent dictionary and serializes writes to make conditional updates atomic.
+3. Expiry compared UTC timestamps with local time, so the service now compares them against UTC throughout.
+4. The expiry worker blocked a thread and ignored host shutdown, so it now awaits a periodic timer and observes the host cancellation token.
+5. Insufficient stock returned HTTP 200, so the reservation endpoint now returns HTTP 409 Conflict as required.
+
+
+#### PDM
+
+If you want to setup pre-commit script, follow this steps:
+
+```bash
+# grant run
+chmod +x .githooks/pre-commit
+# map git hooks
+git config core.hooksPath .githooks
+```

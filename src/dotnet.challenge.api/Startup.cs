@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using dotnet.challenge.api.Background;
 using dotnet.challenge.api.Services;
 using dotnet.challenge.data.Cache;
@@ -17,7 +18,8 @@ public class Startup
 
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddControllers();
+        services.AddControllers().AddJsonOptions(options =>
+            options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(c =>

@@ -17,10 +17,14 @@ public class ReservationsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateReservation([FromBody] CreateReservationRequest request)
+    public async Task<IActionResult> CreateReservation(
+        [FromBody] CreateReservationRequest request,
+        [FromHeader(Name = "X-Verbose")] string? verbose = null)
     {
         var (result, reservation) = await _inventory.TryReserveAsync(
             request.ProductId, request.Quantity, request.TtlSeconds);
+
+
 
         switch (result)
         {
@@ -31,7 +35,14 @@ public class ReservationsController : ControllerBase
                 return NotFound(new { error = "Product not found." });
 
             case ReserveResult.InsufficientStock:
-                return Ok(new { error = "Insufficient stock." });
+                if (bool.TryParse(verbose, out var includeDetails) && includeDetails)
+                {
+                    var details = FormattableString.Invariant(
+                        $"result={result}; requestedQuantity={request.Quantity}; stockQuantity={reservation?.Quantity}");
+
+                    Response.Headers["X-Reservation-Details"] = details;
+                }
+                return Conflict(new { error = "Insufficient stock." });
 
             default:
                 return StatusCode(StatusCodes.Status500InternalServerError);
